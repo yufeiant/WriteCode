@@ -32,10 +32,3 @@ function flatter2(arr){
 let arr = [[12,3,4],1,2,3,[[1,2,3,4],[1,2],[],[]]]
 
 console.log(flatter2(arr))
-
-describe("数组深度扁平化",()=>{
-    it('should 空数组', function () {
-        const res = flatter1([]);
-        expect(res).toEqual([])
-    });
-})
