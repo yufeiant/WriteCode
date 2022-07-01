@@ -1,0 +1,1 @@
+const messages = await import("./message")
