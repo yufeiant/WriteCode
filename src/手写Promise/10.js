@@ -141,11 +141,11 @@ const result = p.then(value=>{
 })
 
 //值传递 测试用例
-let p = new PromiseA((resolve,reject)=>{
+let p1 = new PromiseA((resolve,reject)=>{
     setTimeout(()=>{
        resolve("ok");
     },100)
 });
-const result = p.then().then(value=>{
+const result2 = p1.then().then(value=>{
     console.log(value)
 })

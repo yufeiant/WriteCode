@@ -1,16 +1,12 @@
 /**
  * 2 -  resolve 与 reject 的封装
  * @type {Promise<unknown>}
+ * Promise 自己有三个状态
+ * pending 进行中
+ * fulfilled 完成
+ * rejected 失败
+ *
  */
-// let p = new Promise((resolve,reject)=>{
-//     resolve("ok");
-// });
-//
-// p.then(value=>{
-//     console.log(value);
-// },reason => {
-//     console.log(reason)
-// });
 
 /**
  * 我们的实现
@@ -53,3 +49,13 @@ let p1 = new Promise((resolve,reject)=>{
 });
 
 console.log(p1)
+
+let p = new Promise((resolve,reject)=>{
+    resolve("ok");
+});
+
+p.then(value=>{
+    console.log(value);
+},reason => {
+    console.log(reason)
+});

@@ -43,8 +43,6 @@ const data = [
     }
 ]
 
-
-
 const disposeData=(arr)=>{
     const map = new Map();
     let top = arr[0];
