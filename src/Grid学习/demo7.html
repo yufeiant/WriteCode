@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>网格区域</title>
+    <style>
+        .wrapper {
+            display: grid;
+            grid-template-columns:2fr 5fr;
+            grid-template-rows:120px 1fr;
+            grid-template-areas: 'sidebar header' 'sidebar main';
+            gap: 4px;
+            height: 500px;
+            border: 1px solid blue;
+        }
+        .sidebar {
+            grid-area: sidebar;
+            background: red;
+        }
+        .header {
+            grid-area: header;
+            background: yellowgreen;
+        }
+        .main {
+            grid-area: main;
+            background: #0bbea0;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="sidebar">1</div>
+        <div class="header">2</div>
+        <div class="main">3</div>
+    </div>
+</body>
+</html>
