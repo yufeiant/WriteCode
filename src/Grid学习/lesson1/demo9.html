@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>注意键盘用户</title>
+    <style>
+        .wrapper {
+            display: grid;
+            grid-template-columns:repeat(5,1fr);
+            grid-template-rows:repeat(5,1fr);
+            gap: 4px;
+            height: 500px;
+            background: #7f7f7f;
+        }
+        .btn.one {
+            grid-column: 1;
+            grid-row: 1;
+        }
+        .btn.four {
+            grid-column: 5;
+            grid-row: 3;
+        }
+        .btn.six {
+            grid-column: 2;
+            grid-row: 5;
+        }
+        .btn.two {
+            grid-column: 3;
+            grid-row: 1;
+        }
+        .btn.five {
+            grid-column: 2;
+            grid-row: 4;
+        }
+        .btn.three {
+            grid-column: 4;
+            grid-row: 3;
+        }
+
+        body {
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <button class="btn one">
+            One
+        </button>
+        <button class="btn four">
+            Four
+        </button>
+        <button class="btn six">
+            Six
+        </button>
+        <button class="btn two">
+            Two
+        </button>
+        <button class="btn five">
+            Five
+        </button>
+        <button class="btn three">
+            Three
+        </button>
+    </div>
+</body>
+</html>

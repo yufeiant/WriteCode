@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>创建一个圣杯布局的页面</title>
+    <style>
+        html, body {
+            width: 100vw;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            display: grid;
+            grid-template-rows: 100px auto 100px;
+            grid-template-columns: minmax(200px,3fr) 9fr;
+            grid-template-areas:
+                    "header header"
+                    "nav main"
+                    "nav footer";
+        }
+        header{
+            grid-area: header;
+            background: blue;
+        }
+        nav{
+            grid-area: nav;
+            background: #0bbea0;
+        }
+        main{
+            grid-area: main;
+            background: #C21F39;
+        }
+        footer{
+            grid-area: footer;
+            background: yellowgreen;
+        }
+
+    </style>
+</head>
+<body>
+    <header></header>
+    <nav></nav>
+    <main></main>
+    <footer></footer>
+</body>
+</html>

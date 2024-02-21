@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grid 基于 grid-column 线 定位分配子项</title>
+    <style>
+        body {
+            margin: 40px;
+        }
+        .wrapper {
+            display: grid;
+            grid-template-columns: repeat(4,100px);
+            grid-auto-columns: 200px;
+            grid-template-areas: 'A A B B' 'C D D D' 'E E E E';
+            grid-gap: 10px;
+            background-color: #fff;
+            color: #444;
+        }
+        .child {
+            background-color: #444;
+            color: #fff;
+            border-radius: 5px;
+            padding: 20px;
+            font-size: 150%;
+        }
+
+        .a {
+            grid-area: A;
+        }
+
+        .b {
+            grid-area: B;
+        }
+
+        .c {
+            grid-area: C;
+        }
+
+        .d {
+            grid-area: D;
+        }
+
+        .e {
+            grid-area: E;
+        }
+
+        .f {
+            grid-area: F;
+        }
+    </style>
+</head>
+<body>
+    <article class="wrapper">
+        <div class="child a">A</div>
+        <div class="child b">B</div>
+        <div class="child c">C</div>
+        <div class="child d">D</div>
+        <div class="child e">E</div>
+    </article>
+</body>
+</html>
