@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>01_基础响应式</title>
+</head>
+<body>
+<script>
+	/**
+     * 笔记地址：https://ooimvw9a6j.feishu.cn/wiki/NxIfwKcXgiGYJnkMzUHc9r8PnIe?fromScene=spaceOverview
+	 * @type {{text: string}}
+	 */
+	//原始数据
+	const data = {text:"hello world"}
+	//存储副作用的桶
+	const bucket = new Set()
+	//对原始数据进行代理
+	const obj = new Proxy(data,{
+		//对读取操作进行拦截
+		get(target,key){
+			//将副作用函数添加到桶里
+			bucket.add(effect)
+			return target[key]
+		},
+		//对设置操作进行拦截
+		set(target,key,value){
+			//设置操作
+			target[key] = value
+			//把副作用函数从桶里取出来 并进行执行
+			bucket.forEach(fn=>fn())
+			return true
+		}
+	})
+	//副作用函数
+	const effect=()=>{
+		//这里需要使用 代理的对象
+		document.body.innerText = obj.text;
+	}
+	//执行
+	effect()
+	setTimeout(()=>{
+		//设置的时候 也是使用代理对象 才能正确的触发
+		obj.text = "hello 你好"
+	},1000)
+
+</script>
+</body>
+</html>

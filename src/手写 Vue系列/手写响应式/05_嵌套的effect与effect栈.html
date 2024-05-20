@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>05_嵌套的effect与effect栈</title>
+</head>
+<body>
+<script>
+	//原始数据
+	const data = {bar:true,foo:true}
+
+    //清理旧的副作用函数
+    const cleanup =(effectFn)=>{
+		//遍历effectFn.deps数组
+        for(const deps of effectFn.deps){
+			//这里的deps实际上是set
+			deps.delete(effectFn)
+        }
+		//重置effectFn.deps数组
+        effectFn.deps.length = 0
+    }
+
+	//存储副作用的桶
+	const bucket = new WeakMap()
+    //全局变量存储 临时存储 需要注册的函数
+    let activeEffect;
+	//add---effect 栈
+	const effectStack = []
+	//注册函数
+    const registerEffect=(fn)=>{
+		if (!fn) return ;
+		const effectFn=()=>{
+			//调用clean 清除 关于effectFn 的相关联的依赖
+			cleanup(effectFn)
+			//当effectFn执行时，将其设置为当前激活的副作用函数
+			activeEffect = effectFn;
+			//add---在调用副作用函数执行，把当前副作用函数添加到栈中
+			effectStack.push(activeEffect)
+			//调用该函数 触发代理对象的get函数 添加到桶里面
+			fn()
+            //add--在副作用函数执行完毕之后，把当前副作用函数弹出栈
+            effectStack.pop()
+            //取出压在栈底的值
+            activeEffect = effectStack[effectStack.length-1]
+        }
+		//用来存储所有与该副作用函数相关联的依赖集合
+		effectFn.deps = []
+	    //执行该函数
+		effectFn()
+    }
+	//完成target-->key-->effect 的关联注册
+	//在get函数中追踪属性的变化
+	const track=(target,key)=>{
+		//00 - 判断activeEffect是否存在，如果不存在 直接返回
+		if(!activeEffect) return
+		//01- 根据目标对象获取 对应的 key-->effects
+		let depsMap = bucket.get(target)
+		//如果不存在 就创建
+		if(!depsMap){
+			depsMap = new Map()
+			bucket.set(target,depsMap)
+		}
+		//02-根据属性获取 对应的 副作用函数队列 它是一个Set
+		let deps = depsMap.get(key)
+		if(!deps){
+			deps = new Set()
+			depsMap.set(key,deps)
+		}
+		//03- 把副作用函数添加到拿到的set队列里面
+		deps.add(activeEffect)
+        //04- deps就是一个与当前副作用函数存在关联关系的集合
+        activeEffect.deps.push(deps)
+	}
+	//在set函数中追踪属性的变化
+	const trigger=(target,key)=>{
+		//根据target拿到对应的桶 进行执行
+		let depsMap = bucket.get(target)
+		if(!depsMap) return ;
+		//拿到属性对应的副作用函数队列
+		const effects = depsMap.get(key)
+		//判罚是否存在 并按个执行
+		// effects && effects.forEach(fn=>fn());
+
+        //使用一个新的set方法 避免无限循环执行
+        const effectToRun = new Set(effects)
+		effectToRun.forEach(fn=>fn());
+	}
+
+	//重写拦截的逻辑
+	const obj = new Proxy(data,{
+		//拦截读取的操作
+		get(target,key){
+			track(target,key)
+			//返回属性的值
+			return target[key]
+		},
+		//拦截设置的操作
+		set(target,key,newValue){
+			//设置属性值
+			target[key] = newValue
+			trigger(target,key)
+		},
+	})
+    let temp1,temp2;
+	registerEffect(()=>{
+		console.log("effectFn1 执行")
+		registerEffect(()=>{
+			console.log("effectFn2 执行")
+			temp2 = obj.bar
+		})
+		temp1 = obj.foo
+	})
+	setTimeout(()=>{
+		//设置的时候 也是使用代理对象 才能正确的触发
+		obj.foo = false
+	},1000)
+</script>
+</body>
+</html>
