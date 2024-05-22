@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>06_避免无限递归循环</title>
+    <title>07_调度执行--执行时机</title>
 </head>
 <body>
 <script>
 	//原始数据
-	const data = {bar:true,foo:true}
+	const data = {foo:1}
 
     //清理旧的副作用函数
     const cleanup =(effectFn)=>{
@@ -27,7 +27,7 @@
 	//effect 栈
 	const effectStack = []
 	//注册函数
-    const registerEffect=(fn)=>{
+    const registerEffect=(fn,options = {})=>{
 		if (!fn) return ;
 		const effectFn=()=>{
 			//调用clean 清除 关于effectFn 的相关联的依赖
@@ -43,6 +43,8 @@
             //取出压在栈底的值
             activeEffect = effectStack[effectStack.length-1]
         }
+		//add--将options挂在到对应的effectFn上面
+        effectFn.options = options
 		//用来存储所有与该副作用函数相关联的依赖集合
 		effectFn.deps = []
 	    //执行该函数
@@ -78,14 +80,21 @@
 		if(!depsMap) return ;
 		//拿到属性对应的副作用函数队列
 		const effects = depsMap.get(key)
-        //add - 使用一个新的set方法 避免无限循环执行
-        const effectToRun = new Set()
+		//add - 使用一个新的set方法 避免无限循环执行
+		const effectToRun = new Set()
 		effects.forEach(effectFn=>{
 			if(effectFn !== activeEffect){
 				effectToRun.add(effectFn)
+			}
+		})
+		effectToRun.forEach(effectFn=>{
+			//add--判断当前的副作用函数上面是否存在调度器
+			if(effectFn.options.scheduler){
+				effectFn.options.scheduler(effectFn)
+            }else{
+				effectFn()
             }
         })
-        effectToRun.forEach(effectFn=>effectFn())
 	}
 
 	//重写拦截的逻辑
@@ -103,19 +112,16 @@
 			trigger(target,key)
 		},
 	})
-    let temp1,temp2;
-	registerEffect(()=>{
-		console.log("effectFn1 执行")
-		registerEffect(()=>{
-			console.log("effectFn2 执行")
-			temp2 = obj.bar
-		})
-		temp1 = obj.foo
-	})
-	setTimeout(()=>{
-		//设置的时候 也是使用代理对象 才能正确的触发
-		obj.foo = false
-	},1000)
+    registerEffect(()=>{
+		console.log(obj.foo)
+    },{
+		scheduler(fn){
+			setTimeout(fn)
+        }
+    })
+    obj.foo++
+    console.log('结束了')
+
 </script>
 </body>
 </html>
