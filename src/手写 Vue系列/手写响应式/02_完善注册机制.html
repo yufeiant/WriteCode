@@ -18,7 +18,7 @@
     //全局变量存储 临时存储 需要注册的函数
     let activeEffect;
 	//注册函数
-    const registerEffect=(fn)=>{
+    const effect=(fn)=>{
 		if (!fn) return ;
 		//把注册函数交给全局变量
 		activeEffect = fn;
@@ -44,7 +44,7 @@
 			return true
 		}
 	})
-	registerEffect(()=>{
+	effect(()=>{
 		//这里需要使用 代理的对象
 		document.body.innerText = obj.text;
     })

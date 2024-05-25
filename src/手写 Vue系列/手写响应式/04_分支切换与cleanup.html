@@ -25,7 +25,7 @@
     //全局变量存储 临时存储 需要注册的函数
     let activeEffect;
 	//注册函数
-    const registerEffect=(fn)=>{
+    const effect=(fn)=>{
 		if (!fn) return ;
 		const effectFn=()=>{
 			//调用clean 清除 关于effectFn 的相关联的依赖
@@ -94,7 +94,7 @@
 		},
 	})
 
-	registerEffect(()=>{
+	effect(()=>{
 		console.log("执行了几次")
 		//这里需要使用 代理的对象
 		document.body.innerText = obj.ok ? obj.text:'not'

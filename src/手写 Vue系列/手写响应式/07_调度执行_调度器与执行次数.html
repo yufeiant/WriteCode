@@ -27,7 +27,7 @@
 	//effect 栈
 	const effectStack = []
 	//注册函数
-    const registerEffect=(fn,options = {})=>{
+    const effect=(fn,options = {})=>{
 		if (!fn) return ;
 		const effectFn=()=>{
 			//调用clean 清除 关于effectFn 的相关联的依赖
@@ -132,7 +132,7 @@
         })
     }
 
-    registerEffect(()=>{
+    effect(()=>{
 		console.log(obj.foo)
     },{
 		scheduler(fn){

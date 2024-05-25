@@ -178,6 +178,21 @@
 		return obj
     }
 
+	/**
+     * 简单的实现
+     * 使用effect 以及options.scheduler
+	 * @param source
+	 * @param callback
+	 */
+	function watch(source,callback){
+        effect(()=>source.foo,{
+			scheduler(){
+				//当数据发生变化的时候，执行回调
+            }
+        })
+    }
+
+
 	const sunRes = computed(()=>obj.foo+obj.bar)
 	effect(()=>{
 		//在该副作用函数中读取sumRes.value

@@ -27,7 +27,7 @@
 	//effect 栈
 	const effectStack = []
 	//注册函数
-    const registerEffect=(fn)=>{
+    const effect=(fn)=>{
 		if (!fn) return ;
 		const effectFn=()=>{
 			//调用clean 清除 关于effectFn 的相关联的依赖
@@ -104,9 +104,9 @@
 		},
 	})
     let temp1,temp2;
-	registerEffect(()=>{
+	effect(()=>{
 		console.log("effectFn1 执行")
-		registerEffect(()=>{
+		effect(()=>{
 			console.log("effectFn2 执行")
 			temp2 = obj.bar
 		})
