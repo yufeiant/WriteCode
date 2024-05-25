@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>09_watch 的实现原理_基础实现</title>
+    <title>09_watch 的实现原理_完善读取操作</title>
 </head>
 <body>
 <script>
@@ -185,18 +185,44 @@
 	 * @param callback
 	 */
 	function watch(source,callback){
-        effect(()=>source.foo,{
+		//定义getter
+        let getter;
+        if(typeof source === 'function'){
+			getter = source
+        }else{
+			//否则按照原来的实现调用traverse递归地读取
+            getter = ()=>traverse(source)
+        }
+        effect(()=> getter(),{
 			scheduler(){
 				//当数据发生变化的时候，执行回调
+				callback()
             }
         })
     }
+	/**
+     * 通用的读取操作
+     * 递归遍历所有的属性
+     * 使用set防止重复
+	 */
+	function traverse(value,seen = new Set()){
+		//判断递归的边界 如果数据是原始值或者已经读取过了
+		if(typeof value !== 'object' || value === null || seen.has(value)){
+			return
+        }
+		//将数据添加到seen 已进行数据的读取操作
+        seen.add(value)
+        //暂不考虑其他的数据类型
+        for(const key in value){
+			traverse(value[key],seen)
+        }
+		return value
+    }
 
-	const sunRes = computed(()=>obj.foo+obj.bar)
-	effect(()=>{
-		//在该副作用函数中读取sumRes.value
-		console.log(sunRes.value)
-	})
+	watch(()=>obj.foo,()=>{
+		console.log("数据变化了",obj.foo)
+    })
+
 	//修改obj.foo的值
 	obj.foo++
 

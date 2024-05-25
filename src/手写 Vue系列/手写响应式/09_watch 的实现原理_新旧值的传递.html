@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>09_watch 的实现原理_基础实现</title>
+    <title>09_watch 的实现原理_新旧值的传递</title>
 </head>
 <body>
 <script>
@@ -185,18 +185,57 @@
 	 * @param callback
 	 */
 	function watch(source,callback){
-        effect(()=>source.foo,{
+		//定义getter
+        let getter;
+        if(typeof source === 'function'){
+			getter = source
+        }else{
+			//否则按照原来的实现调用traverse递归地读取
+            getter = ()=>traverse(source)
+        }
+
+		//定义旧值与新值
+       let oldValue,newValue
+        //使用effect注册副作用函数，开启lazy选项，并把返回值存储到effectFn中一遍后续手动调用
+       const effectFn =  effect(()=> getter(),{
+			lazy:true,
 			scheduler(){
-				//当数据发生变化的时候，执行回调
+				//在 scheduler 中重新执行副作用函数，得到的是新值
+				newValue = effectFn()
+				//将旧值与新值作为回调函数的参数
+				callback(newValue,oldValue)
+                //更新旧值，
+                oldValue = newValue
             }
         })
+        //手动调用 先那一下初始化的值
+        oldValue = effectFn()
+    }
+	/**
+     * 通用的读取操作
+     * 递归遍历所有的属性
+     * 使用set防止重复
+	 */
+	function traverse(value,seen = new Set()){
+		//判断递归的边界 如果数据是原始值或者已经读取过了
+		if(typeof value !== 'object' || value === null || seen.has(value)){
+			return
+        }
+		//将数据添加到seen 已进行数据的读取操作
+        seen.add(value)
+        //暂不考虑其他的数据类型
+        for(const key in value){
+			traverse(value[key],seen)
+        }
+		return value
     }
 
-	const sunRes = computed(()=>obj.foo+obj.bar)
-	effect(()=>{
-		//在该副作用函数中读取sumRes.value
-		console.log(sunRes.value)
-	})
+	watch(()=>obj.foo,(newValue,oldValue)=>{
+		console.log("数据变化了",obj.foo)
+        console.log('newValue',newValue)
+        console.log('oldValue',oldValue)
+    })
+
 	//修改obj.foo的值
 	obj.foo++
 
