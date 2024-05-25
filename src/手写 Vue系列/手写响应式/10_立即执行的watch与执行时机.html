@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>09_watch 的实现原理_新旧值的传递</title>
+</head>
+<body>
+<script>
+	//原始数据
+	const data = {foo: 1, bar: 2}
+
+	//清理旧的副作用函数
+	const cleanup = (effectFn) => {
+		//遍历effectFn.deps数组
+		for (const deps of effectFn.deps) {
+			//这里的deps实际上是set
+			deps.delete(effectFn)
+		}
+		//重置effectFn.deps数组
+		effectFn.deps.length = 0
+	}
+
+	//存储副作用的桶
+	const bucket = new WeakMap()
+	//全局变量存储 临时存储 需要注册的函数
+	let activeEffect;
+	//effect 栈
+	const effectStack = []
+	//注册函数
+	const effect = (fn, options = {}) => {
+		if (!fn) return;
+		const effectFn = () => {
+			//调用clean 清除 关于effectFn 的相关联的依赖
+			cleanup(effectFn)
+			//当effectFn执行时，将其设置为当前激活的副作用函数
+			activeEffect = effectFn;
+			//在调用副作用函数执行，把当前副作用函数添加到栈中
+			effectStack.push(activeEffect)
+			//调用该函数 触发代理对象的get函数 添加到桶里面
+			//将fn的执行结果存储到res中
+			const res = fn()
+			//在副作用函数执行完毕之后，把当前副作用函数弹出栈
+			effectStack.pop()
+			//取出压在栈底的值
+			activeEffect = effectStack[effectStack.length - 1]
+			//将res 作为 effectFn的返回值。
+			return res;
+		}
+		//将options挂在到对应的effectFn上面
+		effectFn.options = options
+		//用来存储所有与该副作用函数相关联的依赖集合
+		effectFn.deps = []
+		//add--懒执行该函数
+		if (!options.lazy) {
+			effectFn()
+		}
+		//add--将副作用函数作为返回值返回
+		return effectFn
+	}
+	//完成target-->key-->effect 的关联注册
+	//在get函数中追踪属性的变化
+	const track = (target, key) => {
+		//00 - 判断activeEffect是否存在，如果不存在 直接返回
+		if (!activeEffect) return
+		//01- 根据目标对象获取 对应的 key-->effects
+		let depsMap = bucket.get(target)
+		//如果不存在 就创建
+		if (!depsMap) {
+			depsMap = new Map()
+			bucket.set(target, depsMap)
+		}
+		//02-根据属性获取 对应的 副作用函数队列 它是一个Set
+		let deps = depsMap.get(key)
+		if (!deps) {
+			deps = new Set()
+			depsMap.set(key, deps)
+		}
+		//03- 把副作用函数添加到拿到的set队列里面
+		deps.add(activeEffect)
+		//04- deps就是一个与当前副作用函数存在关联关系的集合
+		activeEffect.deps.push(deps)
+	}
+	//在set函数中追踪属性的变化
+	const trigger = (target, key) => {
+		//根据target拿到对应的桶 进行执行
+		let depsMap = bucket.get(target)
+		if (!depsMap) return;
+		//拿到属性对应的副作用函数队列
+		const effects = depsMap.get(key)
+		//使用一个新的set方法 避免无限循环执行
+		const effectToRun = new Set()
+		effects.forEach(effectFn => {
+			if (effectFn !== activeEffect) {
+				effectToRun.add(effectFn)
+			}
+		})
+		effectToRun.forEach(effectFn => {
+			//判断当前的副作用函数上面是否存在调度器
+			if (effectFn.options.scheduler) {
+				effectFn.options.scheduler(effectFn)
+			} else {
+				effectFn()
+			}
+		})
+	}
+
+	//重写拦截的逻辑
+	const obj = new Proxy(data, {
+		//拦截读取的操作
+		get(target, key) {
+			track(target, key)
+			//返回属性的值
+			return target[key]
+		},
+		//拦截设置的操作
+		set(target, key, newValue) {
+			//设置属性值
+			target[key] = newValue
+			trigger(target, key)
+		},
+	})
+
+	//定义一个任务队列
+	const jobQueue = new Set()
+	//使用Promise.resolve创建一个promise实例，我们用它将一个任务添加到微任务队列里面
+	const p = Promise.resolve()
+	//定义一个标识 是否正在刷新队列
+	let isFlushing = false
+
+	function flushJob() {
+		//如果任务队列正在刷新 则什么都不做
+		if (isFlushing) {
+			return
+		}
+		isFlushing = true
+		p.then(() => {
+			jobQueue.forEach(job => job())
+		}).finally(() => {
+			isFlushing = false
+		})
+	}
+
+	/**
+	 * 实现一个计算函数
+	 * 它的参数是一个是一个getter函数，我们用getter函数作为副作用参数，用它创建一个lazy 的effect ，并返回
+	 * computed函数会返回一个对象，该对象的value属性是一个访问器属性，只有当读取value值的时候，才会执行effectFn
+	 * 并将其结果返回
+	 * @param getter
+	 * @return {{readonly value: *}|*}
+	 */
+	function computed(getter) {
+		//缓冲值
+		let value;
+		//用来标识是否需要重新计算 当为true的时候 就是需要重新计算
+		let dirty = true;
+		//把getter作为副作用函数，创建一个lazy的effect
+		const effectFn = effect(getter, {
+			lazy: true,
+			scheduler() {
+				//在调度器里面 重置 dirty
+				//当依赖的属性发生变化的时候 会触发调度器的执行。
+				dirty = true
+				//当计算属性依赖的响应式数据变化时，手动调用的trigger函数触发响应
+				trigger(obj, 'value')
+			}
+		})
+		//当读取value时才执行effectFn
+		const obj = {
+			get value() {
+				if (dirty) {
+					value = effectFn()
+					dirty = false
+				}
+				//当读取value时，手动调用track函数进行追踪
+				track(obj, 'value')
+				return value
+			}
+		}
+		return obj
+	}
+
+	/**
+	 * 简单的实现
+	 * 使用effect 以及options.scheduler
+	 * @param source
+	 * @param callback
+	 */
+	function watch(source, callback, options = {}) {
+		//定义getter
+		let getter;
+		if (typeof source === 'function') {
+			getter = source
+		} else {
+			//否则按照原来的实现调用traverse递归地读取
+			getter = () => traverse(source)
+		}
+		//定义旧值与新值
+		let oldValue, newValue
+		//提取scheduler调度函数为一个独立的job函数
+		const job = () => {
+			//在 scheduler 中重新执行副作用函数，得到的是新值
+			newValue = effectFn()
+			//将旧值与新值作为回调函数的参数
+			callback(newValue, oldValue)
+			//更新旧值，
+			oldValue = newValue
+		}
+		//使用effect注册副作用函数，开启lazy选项，并把返回值存储到effectFn中一遍后续手动调用
+		const effectFn = effect(() => getter(), {
+			lazy: true,
+			scheduler: ()=>{
+				//在调度函数中判断 flush是否为'post'，如果是，将其放到微任务队列中执行
+                if(options.flush === 'post'){
+					const p = Promise.resolve()
+                    p.then(job)
+                }else{
+					job()
+                }
+            }
+		})
+		//当 immediate 为 true的时候 立即执行一次
+		//如果不是 则我们就拿一下初始值就可以。
+		if (options.immediate) {
+			job()
+		} else {
+			//手动调用 先那一下初始化的值
+			//这里的关键是 这里的副作用函数调用 并不会执行 watch的回调函数 所以它没有立即执行。
+			oldValue = effectFn()
+		}
+	}
+
+	/**
+	 * 通用的读取操作
+	 * 递归遍历所有的属性
+	 * 使用set防止重复
+	 */
+	function traverse(value, seen = new Set()) {
+		//判断递归的边界 如果数据是原始值或者已经读取过了
+		if (typeof value !== 'object' || value === null || seen.has(value)) {
+			return
+		}
+		//将数据添加到seen 已进行数据的读取操作
+		seen.add(value)
+		//暂不考虑其他的数据类型
+		for (const key in value) {
+			traverse(value[key], seen)
+		}
+		return value
+	}
+
+	watch(() => obj.foo, () => {
+			console.log("数据变化了", obj.foo)
+
+		},
+		{
+			//回调哈市
+			flush:'pre' //还可以指定 'post' | 'sync'
+		}
+	)
+
+	//修改obj.foo的值
+	obj.foo++
+
+</script>
+</body>
+</html>
